@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
       toast({
-        title: "Welcome to Blogify!",
+        title: "Welcome to Epistle!",
         description: "Your account has been created successfully.",
       });
     },

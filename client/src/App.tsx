@@ -29,7 +29,7 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="blogify-theme">
+    <ThemeProvider defaultTheme="light" storageKey="epistle-theme">
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Router />

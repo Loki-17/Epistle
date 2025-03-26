@@ -83,15 +83,15 @@ export function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
           </div>
 
           <div className="flex items-center">
-            <Button
-              as={Link}
-              href="/create-post"
-              className="hidden sm:inline-flex items-center mr-4"
-              size="sm"
-            >
-              <PlusCircle className="h-4 w-4 mr-1" />
-              New Post
-            </Button>
+            <Link href="/create-post">
+              <Button
+                className="hidden sm:inline-flex items-center mr-4"
+                size="sm"
+              >
+                <PlusCircle className="h-4 w-4 mr-1" />
+                New Post
+              </Button>
+            </Link>
 
             <Button
               variant="ghost"
