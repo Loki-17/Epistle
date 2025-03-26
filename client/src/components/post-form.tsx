@@ -17,21 +17,38 @@ import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getReadingTime } from "@/lib/utils";
 
-interface PostFormProps {
-  post?: Post;
-  onSubmit: (data: FormData) => void;
-  isSubmitting: boolean;
-}
-
-// Extend the insertPostSchema to add validation rules
-const formSchema = insertPostSchema.extend({
+// Define the form schema
+const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters" }).max(100, { message: "Title must not exceed 100 characters" }),
   content: z.string().min(50, { message: "Content must be at least 50 characters" }),
+  categoryId: z.string().optional(),
+  excerpt: z.string().optional().default(""),
+  coverImage: z.string().optional().default(""),
+  published: z.boolean().default(true),
+  readTime: z.number().optional(),
   tags: z.array(z.string()).optional(),
 });
 
 // Define a type for our form data
 type FormData = z.infer<typeof formSchema>;
+
+// Define a type for the data we'll submit to the parent
+type SubmitData = {
+  title: string;
+  content: string;
+  excerpt: string;
+  coverImage: string;
+  published: boolean;
+  categoryId?: number;
+  readTime?: number;
+  tags?: string[];
+};
+
+interface PostFormProps {
+  post?: Post;
+  onSubmit: (data: SubmitData) => void;
+  isSubmitting: boolean;
+}
 
 export function PostForm({ post, onSubmit, isSubmitting }: PostFormProps) {
   const { toast } = useToast();
@@ -66,7 +83,7 @@ export function PostForm({ post, onSubmit, isSubmitting }: PostFormProps) {
       title: post?.title || "",
       content: post?.content || "",
       excerpt: post?.excerpt || "",
-      categoryId: post?.categoryId ? String(post.categoryId) : undefined,
+      categoryId: post?.categoryId ? String(post.categoryId) : "",
       coverImage: post?.coverImage || "",
       published: post?.published ?? true,
       tags: [],
@@ -116,15 +133,14 @@ export function PostForm({ post, onSubmit, isSubmitting }: PostFormProps) {
   };
 
   const handleSubmit = (data: FormData) => {
-    // Convert categoryId to number
-    if (data.categoryId) {
-      data.categoryId = Number(data.categoryId);
-    }
+    // Convert form data to submit data
+    const submitData: SubmitData = {
+      ...data,
+      categoryId: data.categoryId ? Number(data.categoryId) : undefined,
+      tags: tags,
+    };
     
-    // Add tags to the submission
-    data.tags = tags;
-    
-    onSubmit(data);
+    onSubmit(submitData);
   };
 
   return (
@@ -153,7 +169,7 @@ export function PostForm({ post, onSubmit, isSubmitting }: PostFormProps) {
                 <FormLabel>Category</FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  value={field.value}
+                  value={field.value || ""}
                 >
                   <FormControl>
                     <SelectTrigger>
