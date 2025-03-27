@@ -106,7 +106,6 @@ export const views = pgTable("views", {
   userId: integer("user_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-
 export const insertViewSchema = createInsertSchema(views).pick({
   postId: true,
 });
@@ -138,3 +137,4 @@ export type Bookmark = typeof bookmarks.$inferSelect;
 
 export type InsertView = z.infer<typeof insertViewSchema>;
 export type View = typeof views.$inferSelect;
+

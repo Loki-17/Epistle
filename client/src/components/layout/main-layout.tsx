@@ -35,10 +35,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <line x1="16" y1="8" x2="2" y2="22" />
                 <line x1="17.5" y1="15" x2="9" y2="15" />
               </svg>
-              <span className="text-lg font-bold">Blogify</span>
+              <span className="text-lg font-bold">Epistle</span>
             </div>
             <p className="mt-2 sm:mt-0 text-sm text-gray-500 dark:text-gray-400">
-              &copy; {new Date().getFullYear()} Blogify. All rights reserved.
+              &copy; {new Date().getFullYear()} Epistle. All rights reserved.
             </p>
           </div>
         </div>

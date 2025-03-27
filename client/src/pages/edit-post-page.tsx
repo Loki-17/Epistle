@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
 
 export default function EditPostPage() {
   const { id } = useParams<{ id: string }>();
@@ -69,10 +70,11 @@ export default function EditPostPage() {
     <MainLayout>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
+          <Link href={`/post/${postId}`}>
+            <Button variant="ghost" size="sm">
+              Back to Post
+            </Button>
+          </Link>
         </div>
       </div>
 

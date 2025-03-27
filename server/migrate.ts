@@ -6,7 +6,7 @@ import path from 'path';
 neonConfig.webSocketConstructor = ws;
 
 const pool = new Pool({ 
-  connectionString: "postgresql://neondb_owner:npg_Itdof9sv1Jac@ep-little-fog-a575wss9-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
+  connectionString: "postgresql://neondb_owner:npg_7hcdTAYmR3FE@ep-autumn-dream-a5bh5bzj-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require"
 });
 
 async function migrate() {

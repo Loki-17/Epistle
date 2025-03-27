@@ -1,16 +1,36 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertPostSchema, insertCommentSchema, insertTagSchema, insertLikeSchema, insertBookmarkSchema, insertViewSchema } from "@shared/schema";
 
+// Define the User type
+interface User {
+  id: number;
+  username: string;
+  password: string;
+  displayName: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+}
+
+// Define a custom type for authenticated requests
+interface AuthenticatedRequest extends Request {
+  user: User;
+}
+
 // Middleware to ensure user is authenticated
-function ensureAuthenticated(req: Request, res: any, next: any) {
+function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (req.isAuthenticated()) {
     return next();
   }
   res.status(401).send("Unauthorized");
+}
+
+// Type guard to check if a request is authenticated
+function isAuthenticatedRequest(req: Request): req is AuthenticatedRequest {
+  return req.isAuthenticated() && req.user !== undefined;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -43,7 +63,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
     
     const posts = await storage.getPosts(limit, offset);
-    res.json(posts);
+    
+    // Get user info for each post
+    const postsWithUser = await Promise.all(
+      posts.map(async (post) => {
+        const user = await storage.getUser(post.userId); // Ensure this fetches correct user data
+        return {
+          ...post,
+          user: user ? {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName || "Unknown-User", // Fallback to "Unknown-User" if displayName is null
+            avatarUrl: user.avatarUrl,
+          } : {
+            id: 0,
+            username: "Unknown-User",
+            displayName: "Unknown-User",
+            avatarUrl: null,
+          },
+        };
+      })
+    );
+    
+    res.json(postsWithUser);
   });
 
   app.get("/api/posts/user/:userId", async (req, res) => {
@@ -77,17 +119,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send("Post not found");
     }
     
+    const user = await storage.getUser(post.userId); // Fetch user data
+    const postWithUser = {
+      ...post,
+      user: user ? {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName || "Unknown-User",
+        avatarUrl: user.avatarUrl,
+      } : {
+        id: 0,
+        username: "Unknown-User",
+        displayName: "Unknown-User",
+        avatarUrl: null,
+      },
+    };
+
     // Record a view
-    if (req.isAuthenticated()) {
+    if (req.isAuthenticated() && isAuthenticatedRequest(req)) {
       await storage.createView({ postId: id }, req.user.id);
     } else {
       await storage.createView({ postId: id });
     }
     
-    res.json(post);
+    res.json(postWithUser);
   });
 
-  app.post("/api/posts", ensureAuthenticated, async (req, res) => {
+  app.post("/api/posts", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     try {
       const postData = insertPostSchema.parse(req.body);
       const post = await storage.createPost(postData, req.user.id);
@@ -109,7 +171,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/posts/:id", ensureAuthenticated, async (req, res) => {
+  app.put("/api/posts/:id", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).send("Invalid post ID");
@@ -159,7 +225,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/posts/:id", ensureAuthenticated, async (req, res) => {
+  app.delete("/api/posts/:id", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).send("Invalid post ID");
@@ -226,7 +296,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(commentsWithUser);
   });
 
-  app.post("/api/comments", ensureAuthenticated, async (req, res) => {
+  app.post("/api/comments", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     try {
       const commentData = insertCommentSchema.parse(req.body);
       const post = await storage.getPostById(commentData.postId);
@@ -258,7 +332,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/comments/:id", ensureAuthenticated, async (req, res) => {
+  app.delete("/api/comments/:id", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).send("Invalid comment ID");
@@ -291,13 +369,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const count = await storage.getLikeCount(postId);
-    const userLiked = req.isAuthenticated() ? 
+    const userLiked = req.isAuthenticated() && isAuthenticatedRequest(req) ? 
       !!(await storage.getLikeByUserAndPost(req.user.id, postId)) : false;
     
     res.json({ count, userLiked });
   });
 
-  app.post("/api/likes", ensureAuthenticated, async (req, res) => {
+  app.post("/api/likes", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     try {
       const likeData = insertLikeSchema.parse(req.body);
       const post = await storage.getPostById(likeData.postId);
@@ -316,7 +398,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/likes/:postId", ensureAuthenticated, async (req, res) => {
+  app.delete("/api/likes/:postId", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     const postId = parseInt(req.params.postId);
     if (isNaN(postId)) {
       return res.status(400).send("Invalid post ID");
@@ -331,7 +417,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bookmarks
-  app.get("/api/bookmarks", ensureAuthenticated, async (req, res) => {
+  app.get("/api/bookmarks", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     const bookmarks = await storage.getBookmarksByUser(req.user.id);
     
     // Get post info for each bookmark
@@ -348,7 +438,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(bookmarksWithPosts);
   });
 
-  app.post("/api/bookmarks", ensureAuthenticated, async (req, res) => {
+  app.post("/api/bookmarks", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     try {
       const bookmarkData = insertBookmarkSchema.parse(req.body);
       const post = await storage.getPostById(bookmarkData.postId);
@@ -367,7 +461,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/bookmarks/:postId", ensureAuthenticated, async (req, res) => {
+  app.delete("/api/bookmarks/:postId", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     const postId = parseInt(req.params.postId);
     if (isNaN(postId)) {
       return res.status(400).send("Invalid post ID");
@@ -382,7 +480,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard statistics
-  app.get("/api/dashboard/stats", ensureAuthenticated, async (req, res) => {
+  app.get("/api/dashboard/stats", ensureAuthenticated, async (req: Request, res: Response) => {
+    if (!isAuthenticatedRequest(req)) {
+      return res.status(401).send("Unauthorized");
+    }
+
     const stats = await storage.getUserStats(req.user.id);
     res.json(stats);
   });

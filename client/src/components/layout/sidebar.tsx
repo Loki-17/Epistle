@@ -75,7 +75,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
               <line x1="16" y1="8" x2="2" y2="22" />
               <line x1="17.5" y1="15" x2="9" y2="15" />
             </svg>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">Blogify</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">Epistle</span>
           </Link>
           <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
             <X className="h-5 w-5" />
@@ -146,7 +146,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
                     <line x1="16" y1="8" x2="2" y2="22" />
                     <line x1="17.5" y1="15" x2="9" y2="15" />
                   </svg>
-                  <span className="text-xl font-bold text-gray-900 dark:text-white">Blogify</span>
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">Epistle</span>
                 </Link>
               </div>
               

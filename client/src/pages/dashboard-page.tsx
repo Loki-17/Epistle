@@ -4,7 +4,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Eye, FileText, Heart, MessageCircle, Edit, Trash2, ArrowUpRight } from "lucide-react";
+import { Loader2, Eye, FileText, Heart, MessageCircle, Edit, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,13 +29,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Post } from "@shared/schema";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [postToDelete, setPostToDelete] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("posts");
 
   // Get user stats
@@ -90,7 +88,6 @@ export default function DashboardPage() {
         title: "Post deleted",
         description: "Your post has been deleted successfully.",
       });
-      setPostToDelete(null);
     },
     onError: (error) => {
       toast({
@@ -98,7 +95,6 @@ export default function DashboardPage() {
         description: `Failed to delete post: ${error.message}`,
         variant: "destructive",
       });
-      setPostToDelete(null);
     },
   });
 
@@ -244,21 +240,21 @@ export default function DashboardPage() {
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
               <h3 className="text-lg font-medium mb-2">No published posts yet</h3>
               <p className="text-muted-foreground mb-6">Start creating and publishing your content</p>
-              <Button as={Link} href="/create-post">
-                Create Your First Post
-              </Button>
+              <Link href="/create-post">
+                <Button>
+                  Create Your First Post
+                </Button>
+              </Link>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow">
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Published</TableHead>
-                    <TableHead>Views</TableHead>
-                    <TableHead>Comments</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -267,53 +263,38 @@ export default function DashboardPage() {
                       <TableCell className="font-medium">{post.title}</TableCell>
                       <TableCell>{getCategoryName(post.categoryId)}</TableCell>
                       <TableCell>{formatDate(post.createdAt)}</TableCell>
-                      <TableCell>{post.views || 0}</TableCell>
-                      <TableCell>{post.comments || 0}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/post/${post.id}`}>
-                            <ArrowUpRight className="h-4 w-4 mr-1" />
-                            View
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" asChild>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
                           <Link href={`/edit-post/${post.id}`}>
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Link>
-                        </Button>
-                        <AlertDialog open={postToDelete === post.id} onOpenChange={(open) => {
-                          if (!open) setPostToDelete(null);
-                        }}>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                              onClick={() => setPostToDelete(post.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Post</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete this post and all its comments. This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deletePostMutation.mutate(post.id)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
-                              >
-                                {deletePostMutation.isPending ? "Deleting..." : "Delete"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                          </Link>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this post? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deletePostMutation.mutate(post.id)}
+                                  className="bg-red-500 hover:bg-red-600"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -331,83 +312,68 @@ export default function DashboardPage() {
             </div>
           ) : draftPosts?.length === 0 ? (
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
-              <h3 className="text-lg font-medium mb-2">No drafts</h3>
-              <p className="text-muted-foreground mb-6">Start creating your content</p>
-              <Button as={Link} href="/create-post">
-                Create New Post
-              </Button>
+              <h3 className="text-lg font-medium mb-2">No draft posts</h3>
+              <p className="text-muted-foreground mb-6">Start writing your next post</p>
+              <Link href="/create-post">
+                <Button>
+                  Create New Post
+                </Button>
+              </Link>
             </div>
           ) : (
-            <div className="space-y-4">
-              {draftPosts?.map((post: Post) => (
-                <div key={post.id} className="bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
-                  <div className="px-4 py-5 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <FileText className="text-gray-400 mr-2 h-5 w-5" />
-                        <p className="text-md font-medium text-primary-600 dark:text-primary-400 truncate">
-                          {post.title}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-none">
-                        Draft
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2 sm:justify-between">
-                      <div className="sm:flex space-y-2 sm:space-y-0 sm:space-x-6">
-                        <p className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                          <Tag className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                          {getCategoryName(post.categoryId)}
-                        </p>
-                        <p className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                          <Eye className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                          Last edited on {formatDate(post.updatedAt)}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-3 text-sm">
-                        <Button variant="ghost" size="sm" asChild>
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {draftPosts?.map((post: Post) => (
+                    <TableRow key={post.id}>
+                      <TableCell className="font-medium">{post.title}</TableCell>
+                      <TableCell>{getCategoryName(post.categoryId)}</TableCell>
+                      <TableCell>{formatDate(post.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
                           <Link href={`/edit-post/${post.id}`}>
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Link>
-                        </Button>
-                        <AlertDialog open={postToDelete === post.id} onOpenChange={(open) => {
-                          if (!open) setPostToDelete(null);
-                        }}>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                              onClick={() => setPostToDelete(post.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Draft</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete this draft. This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deletePostMutation.mutate(post.id)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
-                              >
-                                {deletePostMutation.isPending ? "Deleting..." : "Delete"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                          </Link>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this post? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deletePostMutation.mutate(post.id)}
+                                  className="bg-red-500 hover:bg-red-600"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </TabsContent>
@@ -418,43 +384,46 @@ export default function DashboardPage() {
             <div className="flex justify-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
             </div>
-          ) : !bookmarks || bookmarks.length === 0 ? (
+          ) : bookmarks?.length === 0 ? (
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
               <h3 className="text-lg font-medium mb-2">No bookmarks yet</h3>
-              <p className="text-muted-foreground mb-6">Bookmark posts to read them later</p>
-              <Button as={Link} href="/">
-                Browse Posts
-              </Button>
+              <p className="text-muted-foreground mb-6">Start exploring and bookmarking posts</p>
+              <Link href="/explore">
+                <Button>
+                  Explore Posts
+                </Button>
+              </Link>
             </div>
           ) : (
-            <div className="space-y-4">
-              {bookmarks.map((bookmark: any) => (
-                <Card key={bookmark.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    <Link href={`/post/${bookmark.post.id}`} className="block p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <div className="flex items-center space-x-2 mb-2">
-                        {bookmark.post.categoryId && categories && (
-                          <Badge variant="secondary">
-                            {getCategoryName(bookmark.post.categoryId)}
-                          </Badge>
-                        )}
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Bookmarked on {formatDate(bookmark.createdAt)}
-                        </span>
-                      </div>
-                      <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
-                        {bookmark.post.title}
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">
-                        {bookmark.post.excerpt || "No excerpt available"}
-                      </p>
-                      <Button size="sm" className="mt-2">
-                        Read Post
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bookmarks?.map((bookmark: any) => (
+                    <TableRow key={bookmark.id}>
+                      <TableCell className="font-medium">{bookmark.post.title}</TableCell>
+                      <TableCell>{getCategoryName(bookmark.post.categoryId)}</TableCell>
+                      <TableCell>{formatDate(bookmark.post.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/post/${bookmark.post.id}`}>
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                          </Link>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </TabsContent>

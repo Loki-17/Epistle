@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams, Link as RouterLink } from "wouter";
+import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,8 +40,9 @@ export default function PostPage() {
   const { data: author } = useQuery({
     queryKey: ["/api/user", post?.userId],
     queryFn: async () => {
-      const res = await fetch(`/api/user/${post?.userId}`);
-      if (!res.ok) return { username: "Unknown", displayName: "Unknown Author" };
+      if (!post?.userId) return null;
+      const res = await fetch(`/api/user/${post.userId}`);
+      if (!res.ok) return null;
       return await res.json();
     },
     enabled: !!post?.userId,
@@ -229,10 +230,12 @@ export default function PostPage() {
         <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-6 rounded-lg text-center">
           <h2 className="text-xl font-bold mb-2">Error Loading Post</h2>
           <p>We couldn't load this post. It may have been deleted or you may not have permission to view it.</p>
-          <Button as={RouterLink} href="/" className="mt-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
-          </Button>
+          <Link href="/">
+            <Button className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Home
+            </Button>
+          </Link>
         </div>
       </MainLayout>
     );
@@ -242,66 +245,63 @@ export default function PostPage() {
     <MainLayout>
       {/* Back button */}
       <div className="mb-6">
-        <Button variant="ghost" size="sm" as={RouterLink} href="/">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to feed
-        </Button>
+        <Link href="/">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to feed
+          </Button>
+        </Link>
       </div>
 
-      {/* Post Header */}
+      {/* Post header */}
       <div className="mb-8">
-        {category && (
-          <div className="mb-3">
-            <CategoryBadge category={category} />
-          </div>
-        )}
-        <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-          {post.title}
-        </h1>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center">
-            <Avatar className="h-10 w-10 mr-3">
-              <AvatarImage src={avatarUrl} alt={displayName} />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{displayName}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt)}</p>
+        <div className="flex items-center gap-4 mb-4">
+          <Avatar>
+            <AvatarImage src={avatarUrl} alt={displayName} />
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="font-medium text-gray-900 dark:text-white">
+              {displayName}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {formatDate(post.createdAt)} · {readTime}
             </div>
           </div>
-          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-            <span className="mr-2">{readTime}</span>
-            <span>·</span>
-            <span className="ml-2">{likes?.count || 0} likes</span>
-          </div>
         </div>
+
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          {post.title}
+        </h1>
+
+        {category && (
+          <CategoryBadge category={category} />
+        )}
       </div>
 
-      {/* Cover image */}
+      {/* Post content */}
       {post.coverImage && (
         <div className="mb-8">
           <img
             src={post.coverImage}
             alt={post.title}
-            className="w-full h-auto rounded-lg object-cover max-h-[500px]"
+            className="w-full h-auto rounded-lg"
           />
         </div>
       )}
 
-      {/* Post content */}
-      <div 
-        className="prose dark:prose-invert max-w-none mb-8"
-        dangerouslySetInnerHTML={{ __html: post.content }}
-      />
+      <div className="prose dark:prose-invert max-w-none mb-8">
+        {post.content}
+      </div>
 
       {/* Tags */}
       {tags && tags.length > 0 && (
         <div className="mb-8">
           <div className="flex flex-wrap gap-2">
             {tags.map((tag: any) => (
-              <span 
+              <span
                 key={tag.id}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm"
               >
                 #{tag.name}
               </span>
@@ -310,122 +310,123 @@ export default function PostPage() {
         </div>
       )}
 
-      <Separator className="my-8" />
-
       {/* Action buttons */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex space-x-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant={likes?.userLiked ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => likeMutation.mutate()}
-                  disabled={!user || likeMutation.isPending}
-                  className={likes?.userLiked ? "bg-red-500 hover:bg-red-600" : ""}
-                >
-                  <Heart className={`h-4 w-4 mr-1 ${likes?.userLiked ? "fill-current" : ""}`} />
-                  {likes?.count || 0}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {user ? (likes?.userLiked ? "Unlike" : "Like") : "Sign in to like"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+      <div className="flex items-center gap-4 mb-8">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => likeMutation.mutate()}
+                className={likes?.userLiked ? "text-red-500" : ""}
+              >
+                <Heart className="h-4 w-4 mr-2" />
+                {likes?.count || 0}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{likes?.userLiked ? "Unlike" : "Like"}</p>
+            </TooltipContent>
+          </Tooltip>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => document.getElementById("comments-section")?.scrollIntoView({ behavior: "smooth" })}
-                >
-                  <MessageCircle className="h-4 w-4 mr-1" />
-                  {comments?.length || 0}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>View comments</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {}}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                {comments?.length || 0}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Comment</p>
+            </TooltipContent>
+          </Tooltip>
 
-          <TooltipProvider>
+          {user && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant={bookmarkStatus?.isBookmarked ? "default" : "outline"} 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => bookmarkMutation.mutate()}
-                  disabled={!user || bookmarkMutation.isPending}
-                  className={bookmarkStatus?.isBookmarked ? "bg-primary-500 hover:bg-primary-600" : ""}
+                  className={bookmarkStatus?.isBookmarked ? "text-primary-500" : ""}
                 >
                   {bookmarkStatus?.isBookmarked ? (
-                    <BookmarkCheck className="h-4 w-4" />
+                    <BookmarkCheck className="h-4 w-4 mr-2" />
                   ) : (
-                    <Bookmark className="h-4 w-4" />
+                    <Bookmark className="h-4 w-4 mr-2" />
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {user 
-                  ? (bookmarkStatus?.isBookmarked ? "Remove from bookmarks" : "Add to bookmarks") 
-                  : "Sign in to bookmark"
-                }
+                <p>{bookmarkStatus?.isBookmarked ? "Remove bookmark" : "Bookmark"}</p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
-        </div>
+          )}
 
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={handleShare}>
-            <Share2 className="h-4 w-4 mr-1" />
-            Share
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Share</p>
+            </TooltipContent>
+          </Tooltip>
 
           {isAuthor && (
-            <Button variant="outline" size="sm" as={RouterLink} href={`/edit-post/${post.id}`}>
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
+            <Link href={`/edit-post/${postId}`}>
+              <Button variant="ghost" size="sm">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </Link>
           )}
-        </div>
+        </TooltipProvider>
       </div>
+
+      <Separator className="my-8" />
 
       {/* Comments section */}
-      <div id="comments-section" className="mt-12">
-        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-          Comments {comments?.length > 0 && `(${comments.length})`}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          Comments
         </h2>
-
         {user ? (
-          <div className="mb-8">
-            <CommentForm 
-              postId={post.id} 
-              onSubmit={handleCommentSubmit} 
-              isSubmitting={commentMutation.isPending} 
-            />
-          </div>
+          <CommentForm 
+            onSubmit={handleCommentSubmit} 
+            postId={postId}
+            isSubmitting={commentMutation.isPending}
+          />
         ) : (
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-8 text-center">
-            <p className="text-gray-600 dark:text-gray-300 mb-2">
-              Sign in to join the conversation
-            </p>
-            <Button as={RouterLink} href="/auth">
-              Sign In
+          <Link href="/auth">
+            <Button variant="outline" size="sm">
+              Sign in to comment
             </Button>
-          </div>
-        )}
-
-        {isLoadingComments ? (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-          </div>
-        ) : (
-          <CommentList comments={comments || []} postId={post.id} />
+          </Link>
         )}
       </div>
+
+      {isLoadingComments ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+        </div>
+      ) : comments?.length === 0 ? (
+        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+          No comments yet. Be the first to comment!
+        </div>
+      ) : (
+        <CommentList comments={comments} postId={postId} />
+      )}
     </MainLayout>
   );
 }
