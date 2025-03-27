@@ -24,8 +24,6 @@ Welcome to **Epistle**, a next-generation blogging platform designed to elevate 
 
 Join us in reshaping the future of blogging. **Simplify. Refine. Enhance. Foster.**  
 
-https://youtu.be/D15isiht3_E?si=0GPZo7Y7M_RuTFcQ
-
 🎥 **Video Overview:** [Watch Here](https://youtu.be/D15isiht3_E?si=0GPZo7Y7M_RuTFcQ)  
 📄 **Detailed PDF:** [Read More](https://drive.google.com/file/d/1UWfWsjLeBT2BdsSIflCh1IRfJGqFtB5x/view?usp=sharing)  
 
