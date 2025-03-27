@@ -31,20 +31,16 @@ export function ThemeProvider({
   );
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-
-      root.classList.add(systemTheme);
-      return;
+    if (root) {
+      // Remove any previously added theme classes
+      root.classList.remove(...Array.from(root.classList).filter(cls => cls.startsWith('theme-')));
+  
+      // Sanitize the theme value to replace spaces with hyphens
+      const sanitizedTheme = `theme-${theme.replace(/\s+/g, '-')}`;
+  
+      // Add the sanitized theme class
+      root.classList.add(sanitizedTheme);
     }
-
-    root.classList.add(theme);
   }, [theme]);
 
   const value = {

@@ -59,21 +59,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Posts
   app.get("/api/posts", async (req, res) => {
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
-    const posts = await storage.getPosts(limit, offset);
-    
-    // Get user info for each post
-    const postsWithUser = await Promise.all(
-      posts.map(async (post) => {
-        const user = await storage.getUser(post.userId); // Ensure this fetches correct user data
+    try {
+      // Get posts with pagination
+      const posts = await storage.getPosts(limit, offset);
+      
+      // Extract all user IDs needed
+      const userIds = Array.from(new Set(posts.map(post => post.userId)));
+      
+      // Fetch all needed users in one query
+      const users = await Promise.all(userIds.map(id => storage.getUser(id)));
+      
+      // Create a map for quick lookups
+      const userMap = new Map();
+      users.forEach(user => {
+        if (user) userMap.set(user.id, user);
+      });
+      
+      // Combine the data
+      const postsWithUser = posts.map(post => {
+        const user = userMap.get(post.userId);
         return {
           ...post,
           user: user ? {
             id: user.id,
             username: user.username,
-            displayName: user.displayName || "Unknown-User", // Fallback to "Unknown-User" if displayName is null
+            displayName: user.displayName || "Unknown-User",
             avatarUrl: user.avatarUrl,
           } : {
             id: 0,
@@ -82,10 +95,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             avatarUrl: null,
           },
         };
-      })
-    );
-    
-    res.json(postsWithUser);
+      });
+      
+      res.json(postsWithUser);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      res.status(500).send("Error fetching posts");
+    }
   });
 
   app.get("/api/posts/user/:userId", async (req, res) => {

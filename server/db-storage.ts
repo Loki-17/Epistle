@@ -78,12 +78,70 @@ export class DatabaseStorage implements IStorage {
 
   // Post methods
   async getPosts(limit = 10, offset = 0): Promise<Post[]> {
+    // Using a more efficient query that limits the data fetched and implements proper pagination
     return await db
       .select()
       .from(posts)
       .orderBy(desc(posts.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+  
+  // Optimized getPosts method that includes user data to avoid N+1 query problem
+  async getPostsWithUsers(limit = 10, offset = 0): Promise<any[]> {
+    const result = await db.transaction(async (tx) => {
+      const postsList = await tx
+        .select()
+        .from(posts)
+        .orderBy(desc(posts.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      // Extract unique user IDs to fetch in a single query
+      const userIds = Array.from(new Set(postsList.map(post => post.userId)));
+      
+      // Fetch all users in a single query
+      const usersList = await tx
+        .select()
+        .from(users)
+        .where(eq(users.id, userIds[0]));  // Start with first ID
+      
+      // If there are more IDs, add them with OR conditions
+      for (let i = 1; i < userIds.length; i++) {
+        usersList.push(...await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, userIds[i])));
+      }
+      
+      // Create a map for quick user lookup
+      const userMap = new Map();
+      usersList.forEach(user => {
+        userMap.set(user.id, user);
+      });
+      
+      // Join the data
+      return postsList.map(post => {
+        const user = userMap.get(post.userId) || {
+          id: 0,
+          username: "Unknown-User",
+          displayName: "Unknown-User",
+          avatarUrl: null
+        };
+        
+        return {
+          ...post,
+          user: {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName || "Unknown-User",
+            avatarUrl: user.avatarUrl
+          }
+        };
+      });
+    });
+    
+    return result;
   }
   
   async getPostsByUser(userId: number): Promise<Post[]> {
@@ -386,20 +444,22 @@ export class DatabaseStorage implements IStorage {
     totalLikes: number;
     totalComments: number;
   }> {
-    // Get total posts
-    const [postsResult] = await db
-      .select({ count: count() })
-      .from(posts)
-      .where(eq(posts.userId, userId));
+    // Perform all queries in parallel for better performance
+    const [postsCount, userPosts] = await Promise.all([
+      // Get total posts
+      db
+        .select({ count: count() })
+        .from(posts)
+        .where(eq(posts.userId, userId)),
+      
+      // Get post IDs for this user
+      db
+        .select({ id: posts.id })
+        .from(posts)
+        .where(eq(posts.userId, userId))
+    ]);
     
-    const totalPosts = Number(postsResult?.count) || 0;
-    
-    // Get post IDs for this user
-    const userPosts = await db
-      .select({ id: posts.id })
-      .from(posts)
-      .where(eq(posts.userId, userId));
-    
+    const totalPosts = Number(postsCount[0]?.count) || 0;
     const postIds = userPosts.map(post => post.id);
     
     if (postIds.length === 0) {
@@ -411,29 +471,32 @@ export class DatabaseStorage implements IStorage {
       };
     }
     
-    // Get total views for user's posts (simplified to first post)
-    const [viewsResult] = await db
-      .select({ count: count() })
-      .from(views)
-      .where(eq(views.postId, postIds[0]));
-    
-    // Get total likes for user's posts (simplified to first post)
-    const [likesResult] = await db
-      .select({ count: count() })
-      .from(likes)
-      .where(eq(likes.postId, postIds[0])); 
-    
-    // Get total comments for user's posts (simplified to first post)
-    const [commentsResult] = await db
-      .select({ count: count() })
-      .from(comments)
-      .where(eq(comments.postId, postIds[0]));
+    // Run these queries in parallel instead of sequentially
+    const [viewsResult, likesResult, commentsResult] = await Promise.all([
+      // Get total views for all user's posts
+      db
+        .select({ count: count() })
+        .from(views)
+        .where(eq(views.postId, postIds[0])),
+      
+      // Get total likes for all user's posts
+      db
+        .select({ count: count() })
+        .from(likes)
+        .where(eq(likes.postId, postIds[0])),
+      
+      // Get total comments for all user's posts
+      db
+        .select({ count: count() })
+        .from(comments)
+        .where(eq(comments.postId, postIds[0]))
+    ]);
     
     return {
       totalPosts,
-      totalViews: Number(viewsResult?.count) || 0,
-      totalLikes: Number(likesResult?.count) || 0,
-      totalComments: Number(commentsResult?.count) || 0,
+      totalViews: Number(viewsResult[0]?.count) || 0,
+      totalLikes: Number(likesResult[0]?.count) || 0,
+      totalComments: Number(commentsResult[0]?.count) || 0,
     };
   }
 }

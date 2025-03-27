@@ -16,6 +16,9 @@ export type RegisterData = z.infer<typeof registerSchema>;
 
 export async function login(data: LoginData) {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch("/api/login", {
       method: "POST",
       headers: {
@@ -23,7 +26,10 @@ export async function login(data: LoginData) {
       },
       body: JSON.stringify(data),
       credentials: "include", // Important for session cookies
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json();
@@ -40,6 +46,9 @@ export async function login(data: LoginData) {
 
 export async function register(data: RegisterData) {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch("/api/register", {
       method: "POST",
       headers: {
@@ -47,7 +56,10 @@ export async function register(data: RegisterData) {
       },
       body: JSON.stringify(data),
       credentials: "include", // Important for session cookies
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json();

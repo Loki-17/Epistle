@@ -213,13 +213,13 @@ export default function AuthPage() {
               <line x1="16" y1="8" x2="2" y2="22" />
               <line x1="17.5" y1="15" x2="9" y2="15" />
             </svg>
-            <h1 className="text-3xl font-bold">Epistle</h1>
+            <h1 className="text-3xl font-bold bg-black">Epistle</h1>
           </div>
-          <h2 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100">Express your ideas with the world</h2>
-          <p className="text-lg opacity-90 mb-6">
+          <h2 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r bg-black">Express your ideas with the world</h2>
+          <p className="text-lg opacity-90 mb-6 text-black">
             Join our community of writers, thinkers, and creators. Share your stories, expertise, and insights with readers from around the globe.
           </p>
-          <div className="space-y-4">
+          <div className="space-y-4 text-black">
             <div className="flex items-center">
               <div className="bg-white/20 p-2 rounded-full mr-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
